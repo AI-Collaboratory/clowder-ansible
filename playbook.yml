@@ -1,0 +1,48 @@
+---
+- hosts: all
+  sudo: yes
+  tasks:
+    - apt_repository: repo='deb http://www.rabbitmq.com/debian/ testing main' state=present
+    - apt_key: url=http://www.rabbitmq.com/rabbitmq-signing-key-public.asc state=present
+#    - apt_repository: repo='deb http://downloads-distro.mongodb.org/repo/ubuntu-upstart dist 10gen' state=present
+#    - apt_key: keyserver=keyserver.ubuntu.com id=7F0CEB10 state=present
+
+#   This package should usually be supplied in the base image, vivid requires a reboot after it is installed.
+#    - apt: pkg=policykit-1 state=installed
+
+    - name: Install Packages
+      apt: pkg={{ item }} state=installed update_cache=true
+      with_items:
+        - openjdk-7-jdk
+        - mongodb
+        - rabbitmq-server
+        - unzip
+        - postfix
+        - git
+
+    - file: path=/etc/rabbitmq/rabbitmq.conf.d state=directory
+    - command: rabbitmq-plugins enable rabbitmq_management
+
+    - user: name=clowder system=yes group=users state=present
+
+    - git: repo=https://opensource.ncsa.illinois.edu/stash/scm/cats/clowder.git dest=/home/clowder/clowder version=develop update=yes
+    - file: path=/home/clowder/clowder recurse=yes state=directory owner=clowder group=users
+    - file: path=/home/clowder/clowder/custom state=directory owner=clowder group=users
+
+    - lineinfile: dest=/home/clowder/clowder/conf/play.plugins regexp="^9992:services.RabbitmqPlugin" insertafter="^#9992:services.RabbitmqPlugin" line="9992:services.RabbitmqPlugin"
+
+    - name: Enable services
+      service: name={{ item }} enabled=yes
+      with_items:
+        - mongodb
+        - rabbitmq-server
+
+  roles:
+    - extractors-siegfried
+
+  handlers:
+    - name: restart services
+      service: name={{ item }} state=restarted
+      with_items:
+        - mongodb
+        - rabbitmq-server

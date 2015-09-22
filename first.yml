@@ -1,0 +1,8 @@
+---
+- hosts: all
+  sudo: yes
+  tasks:
+    - name: Install Packages
+      apt: pkg={{ item }} state=installed update_cache=true
+      with_items:
+        - policykit-1
