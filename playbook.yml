@@ -1,7 +1,7 @@
 ---
-- hosts: all
+- hosts: clowderserver
   sudo: yes
-  tasks:
+  pre_tasks:
     - apt_repository: repo='deb http://www.rabbitmq.com/debian/ testing main' state=present
     - apt_key: url=http://www.rabbitmq.com/rabbitmq-signing-key-public.asc state=present
 #    - apt_repository: repo='deb http://downloads-distro.mongodb.org/repo/ubuntu-upstart dist 10gen' state=present
@@ -11,7 +11,7 @@
 #    - apt: pkg=policykit-1 state=installed
 
     - name: Install Packages
-      apt: pkg={{ item }} state=installed update_cache=true
+      apt: pkg={{ item }} state=installed update_cache=yes
       with_items:
         - openjdk-7-jdk
         - mongodb
@@ -25,19 +25,26 @@
 
     - user: name=clowder system=yes group=users state=present
 
-    - git: repo=https://opensource.ncsa.illinois.edu/stash/scm/cats/clowder.git dest=/home/clowder/clowder version=develop update=yes
-    - file: path=/home/clowder/clowder recurse=yes state=directory owner=clowder group=users
-    - file: path=/home/clowder/clowder/custom state=directory owner=clowder group=users
+    - name: Install Clowder Distribution (built locally with 'dist')
+      unarchive: copy=yes src=../clowder/target/universal/clowder-0.9.1-SNAPSHOT.zip dest=/home/clowder owner=clowder group=users creates=/home/clowder/clowder-0.9.1-SNAPSHOT/conf/application.conf
 
-    - lineinfile: dest=/home/clowder/clowder/conf/play.plugins regexp="^9992:services.RabbitmqPlugin" insertafter="^#9992:services.RabbitmqPlugin" line="9992:services.RabbitmqPlugin"
+    - name: Configure Clowder
+      file: path=/home/clowder/clowder-0.9.1-SNAPSHOT/custom state=directory owner=clowder group=users
+    - lineinfile: dest=/home/clowder/clowder-0.9.1-SNAPSHOT/conf/play.plugins regexp="^9992:services.RabbitmqPlugin" insertafter="^#9992:services.RabbitmqPlugin" line="9992:services.RabbitmqPlugin"
+    - lineinfile: dest=/home/clowder/clowder-0.9.1-SNAPSHOT/conf/application.conf regexp="^application.secret=" line="application.secret=\"{{ application_secret }}\""
 
     - name: Enable services
       service: name={{ item }} enabled=yes
       with_items:
         - mongodb
         - rabbitmq-server
+      notify: restart services
+
+    - command: rabbitmqctl add_user {{ rabbitmq_username }} {{ rabbitmq_password }}
+    - command: rabbitmqctl set_permissions {{ rabbitmq_username }} ".*" ".*" ".*"
 
   roles:
+    - pyclowder
     - extractors-siegfried
 
   handlers:

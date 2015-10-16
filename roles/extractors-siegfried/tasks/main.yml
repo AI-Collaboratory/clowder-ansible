@@ -1,6 +1,0 @@
----
-  - apt_repository: repo='deb http://dl.bintray.com/siegfried/debian wheezy main' state=present
-  - apt_key: url=https://bintray.com/user/downloadSubjectPublicKey?username=bintray state=present
-  - apt: pkg=siegfried state=installed update_cache=yes
-  - git: repo=https://gregjansen@opensource.ncsa.illinois.edu/stash/scm/cats/extractors-siegfried.git dest=/home/clowder/extractors-siegfried update=yes
-  - file: path=/home/clowder/extractors-siegfried recurse=yes state=directory owner=clowder group=users
