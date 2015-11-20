@@ -1,0 +1,91 @@
+# This is the main configuration file for the application.
+
+# configuration can be specified using dot notation or object notation.
+# For example this:
+# medici2.diskStorage.path="/tmp/medici"
+# medici2.diskStorage.depth=3
+# and this is the same.
+# medici2 {
+#   disktStorage {
+#     path="/tmp"/medici"
+#     depth=3
+#   }
+# }
+#
+# this is import since it could lead to unexpected results:
+# foo=5
+# foo.bar=7
+# now foo is an object and no longer has value 5, but has a property bar which is 7.
+
+# ~~~~~
+
+# Host machine IP to connect from outside, also set the SWAGGER
+# URL.
+hostIp = "{{ clowder_host }}"
+
+# body parser maximum content length
+# based on Max BSON size 16777216, otherwise it gives exception
+parsers.text.maxLength=20M
+
+# path to put application, if not specified this will be hosted as
+# the root application. If this is fronted by nginx or apache and
+# using proxy set this to the same path as the webserver path.
+#application.context="/medici"
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Permissions
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# What setup should medici use for permissions this can be either:
+# - admin   : everything needs a valid login, admin actions require
+#             user to be in list of admins
+# - private : everything needs a valid login, everybody is admin,
+#             except for addAdmin, removeAdmin, listUsers which
+#             require user to be in list of admins.
+# - public  : anonymous can do all read operations, but any writes
+#             require a login. Everybody is admin, except for
+#             addAdmin, removeAdmin, listUsers which require user
+#             to be in list of admins.
+# The default is public, if you set this to private your probably
+# want to set registerThroughAdmins=true and set the admin for the
+# server.
+permissions = public
+
+# Setting ownerOnly to true will only allow the owner of a resource
+# to modify it. The default if not set is false
+#ownerOnly = false
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Signup
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Initial admins of app, this is a list of email addresses who will
+# get an email when a new user signs up. This can also be configured
+# in the admin menu
+initialAdmins="{{ admin_email }}"
+
+# Whether emails for new users registrations go through admins first
+registerThroughAdmins=false
+
+# if registerThroughAdmins is true the following message will be
+# displayed to the user after they enter their email address.
+messageOnStartRegistrationWithAdmin="An admin will review your registration and will, if accepted, forward a registration link to your email."
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Secret key
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# The secret key is used to secure cryptographics functions.
+# If you deploy your application to several instances be sure to use
+# the same key!
+application.secret="{{ clowder_app_secret }}"
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Secret Extractor key
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# this should be changed. This key is send to the extractors to
+# access the data.
+# TODO this is an admin key and should not exist.
+commKey={{ extractor_comm_key }}
+
+smtp {
+    host=localhost
+    from="{{ admin_email }}"
+}

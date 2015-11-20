@@ -1,5 +1,5 @@
 ---
-- hosts: all
+- hosts: clowderserver
   sudo: yes
   tasks:
     - apt_repository: repo='deb http://www.rabbitmq.com/debian/ testing main' state=present
@@ -20,25 +20,35 @@
         - postfix
         - git
 
-    - file: path=/etc/rabbitmq/rabbitmq.conf.d state=directory
+    - name: Enable services
+      service: name={{ item }} enabled=yes state=started
+      with_items:
+        - mongodb
+        # - rabbitmq-server
+
     - command: rabbitmq-plugins enable rabbitmq_management
+    - command: rabbitmqctl -q add_user {{ rabbitmq_username }} {{ rabbitmq_password }}
+      ignore_errors: yes
 
     - user: name=clowder system=yes group=users state=present
 
-    - git: repo=https://opensource.ncsa.illinois.edu/stash/scm/cats/clowder.git dest=/home/clowder/clowder version=develop update=yes
-    - file: path=/home/clowder/clowder recurse=yes state=directory owner=clowder group=users
-    - file: path=/home/clowder/clowder/custom state=directory owner=clowder group=users
+    - command: killall java
+      ignore_errors: yes
+    - git: repo=https://opensource.ncsa.illinois.edu/stash/scm/cats/clowder.git dest=/opt/clowder version=master update=yes force=yes
+    - template: src=templates/custom.conf.j2 dest=/opt/clowder/conf/custom.conf
+    - copy: src=files/start.sh dest=/opt/clowder/start.sh mode=0755
+    - lineinfile: dest=/opt/clowder/conf/play.plugins regexp="^9992:services.RabbitmqPlugin" insertafter="^#9992:services.RabbitmqPlugin" line="9992:services.RabbitmqPlugin"
+    - file: path=/opt/clowder state=directory recurse=yes owner=clowder group=users
 
-    - lineinfile: dest=/home/clowder/clowder/conf/play.plugins regexp="^9992:services.RabbitmqPlugin" insertafter="^#9992:services.RabbitmqPlugin" line="9992:services.RabbitmqPlugin"
+    #- command: "( ( cd /opt/clowder ; nohup ./sbt -Dhttp.port=9000 'run 9000' 1>/dev/null 2>&1 ) & )"
+    #  args:
+    #    chdir: /opt/clowder
 
-    - name: Enable services
-      service: name={{ item }} enabled=yes
-      with_items:
-        - mongodb
-        - rabbitmq-server
-
-  roles:
-    - extractors-siegfried
+    - name: Starting application (First start may take 15 minutes)
+      #shell: start-stop-daemon --start --quiet --pidfile /var/run/clowder --exec /opt/clowder/start.sh
+      shell: ( ( cd /opt/clowder ; nohup ./sbt -Dhttp.port=9000 'run 9000' 1>console.out 2>&1 ) & )
+      args:
+        executable: "/bin/bash"
 
   handlers:
     - name: restart services
