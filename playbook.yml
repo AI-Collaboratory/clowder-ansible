@@ -1,7 +1,7 @@
 ---
 - hosts: clowderserver
   sudo: yes
-  tasks:
+  pre_tasks:
     - apt_repository: repo='deb http://www.rabbitmq.com/debian/ testing main' state=present
     - apt_key: url=http://www.rabbitmq.com/rabbitmq-signing-key-public.asc state=present
 #    - apt_repository: repo='deb http://downloads-distro.mongodb.org/repo/ubuntu-upstart dist 10gen' state=present
@@ -11,7 +11,7 @@
 #    - apt: pkg=policykit-1 state=installed
 
     - name: Install Packages
-      apt: pkg={{ item }} state=installed update_cache=true
+      apt: pkg={{ item }} state=installed update_cache=yes
       with_items:
         - openjdk-7-jdk
         - mongodb
