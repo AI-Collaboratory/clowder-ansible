@@ -24,7 +24,8 @@
         - git
         - nginx
 
-    - copy: src=files/clowder-nginx.conf dest=/etc/nginx/conf.d/clowder-nginx.conf
+    - name: Configure nginx
+      copy: src=files/clowder-nginx.conf dest=/etc/nginx/conf.d/clowder-nginx.conf
 
     - name: Enable services
       service: name={{ item }} enabled=yes state=restarted
@@ -36,28 +37,27 @@
     - command: rabbitmqctl -q add_user {{ rabbitmq_username }} {{ rabbitmq_password }}
       ignore_errors: yes
 
-    - name: ensure clowder group exists
+    - name: Ensure clowder group exists
       group: name=clowder state=present system=yes
-    - name: ensure clowder user exists
+    - name: Ensure clowder user exists
       user: name=clowder group=clowder createhome=no shell=/bin/false system=yes state=present
 
-    - git: repo=https://opensource.ncsa.illinois.edu/stash/scm/cats/clowder.git dest=/opt/clowder version=master update=yes force=yes
-    - template: src=templates/custom.conf.j2 dest=/opt/clowder/conf/custom.conf
-    #- copy: src=files/start.sh dest=/opt/clowder/start.sh mode=0755
+    - name: Downloading and installing Clowder at /opt/clowder
+      get_url: url=https://opensource.ncsa.illinois.edu/bamboo/artifact/CATS-CORE/JOB1/build-latestSuccessful/dist/clowder-{{ clowder_version }}.zip dest=/opt/clowder.zip
+    - unarchive: src=/opt/clowder.zip dest=/opt copy=no
+    - file: path=/opt/clowder-{{ clowder_version }} state=directory recurse=yes owner=clowder group=users
+    - file: path=/opt/clowder-{{ clowder_version }}/custom state=directory owner=clowder group=users
+    - file: path=/opt/clowder src=/opt/clowder-{{ clowder_version }} state=link
+
+    - name: Configuring Clowder application
+      template: src=templates/custom.conf.j2 dest=/opt/clowder/custom/custom.conf
     - lineinfile: dest=/opt/clowder/conf/play.plugins regexp="^9992:services.RabbitmqPlugin" insertafter="^#9992:services.RabbitmqPlugin" line="9992:services.RabbitmqPlugin"
-    - file: path=/opt/clowder state=directory recurse=yes owner=clowder group=users
 
-    - copy: src=files/clowder.service dest=/etc/systemd/system/clowder.service
-    # - copy: src=files/clowder.conf dest=/etc/init/clowder.conf backup=yes mode=0644
+    - name: Setup Clowder systemd daemon service
+      template: src=templates/clowder.service.j2 dest=/etc/systemd/system/clowder.service
+    - command: systemctl daemon-reload
     - name: Enable services
-      service: name=clowder state=started
-
-    #- name: Starting application (First start may take 15 minutes)
-      #shell: start-stop-daemon --start --quiet --pidfile /var/run/clowder --exec /opt/clowder/start.sh
-    #  shell: ( ( cd /opt/clowder ; nohup ./sbt -Dhttp.port=9000 'run 9000' 1>console.out 2>&1 ) & )
-    #  become_user: clowder
-    #  args:
-    #    executable: "/bin/bash"
+      service: name=clowder state=restarted enabled=yes
 
   handlers:
     - name: restart services

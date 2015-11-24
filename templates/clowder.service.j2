@@ -2,8 +2,10 @@
 Description=Clowder Server
 
 [Service]
+Type=simple
 WorkingDirectory=/opt/clowder
-ExecStart=/opt/clowder/sbt -Dhttp.port=9000 'run 9000'
+PIDFile=/opt/clowder/RUNNING_PID
+ExecStart=/opt/clowder/bin/clowder -DMONGOUPDATE=1 -Dhttp.port=9000
 User=clowder
 
 [Install]
