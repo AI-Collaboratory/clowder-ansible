@@ -1,0 +1,10 @@
+[Unit]
+Description=Clowder Server
+
+[Service]
+WorkingDirectory=/opt/clowder
+ExecStart=/opt/clowder/sbt -Dhttp.port=9000 'run 9000'
+User=clowder
+
+[Install]
+WantedBy=multi-user.target

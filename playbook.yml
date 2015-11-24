@@ -4,6 +4,8 @@
   pre_tasks:
     - apt_repository: repo='deb http://www.rabbitmq.com/debian/ testing main' state=present
     - apt_key: url=http://www.rabbitmq.com/rabbitmq-signing-key-public.asc state=present
+    - apt_repository: repo='deb http://packages.elasticsearch.org/elasticsearch/1.3/debian stable main' state=present
+    - apt_key: url=http://packages.elasticsearch.org/GPG-KEY-elasticsearch state=present
 #    - apt_repository: repo='deb http://downloads-distro.mongodb.org/repo/ubuntu-upstart dist 10gen' state=present
 #    - apt_key: keyserver=keyserver.ubuntu.com id=7F0CEB10 state=present
 
@@ -16,39 +18,46 @@
         - openjdk-7-jdk
         - mongodb
         - rabbitmq-server
+        - elasticsearch
         - unzip
         - postfix
         - git
+        - nginx
+
+    - copy: src=files/clowder-nginx.conf dest=/etc/nginx/conf.d/clowder-nginx.conf
 
     - name: Enable services
-      service: name={{ item }} enabled=yes state=started
+      service: name={{ item }} enabled=yes state=restarted
       with_items:
         - mongodb
-        # - rabbitmq-server
+        - nginx
 
     - command: rabbitmq-plugins enable rabbitmq_management
     - command: rabbitmqctl -q add_user {{ rabbitmq_username }} {{ rabbitmq_password }}
       ignore_errors: yes
 
-    - user: name=clowder system=yes group=users state=present
+    - name: ensure clowder group exists
+      group: name=clowder state=present system=yes
+    - name: ensure clowder user exists
+      user: name=clowder group=clowder createhome=no shell=/bin/false system=yes state=present
 
-    - command: killall java
-      ignore_errors: yes
     - git: repo=https://opensource.ncsa.illinois.edu/stash/scm/cats/clowder.git dest=/opt/clowder version=master update=yes force=yes
     - template: src=templates/custom.conf.j2 dest=/opt/clowder/conf/custom.conf
-    - copy: src=files/start.sh dest=/opt/clowder/start.sh mode=0755
+    #- copy: src=files/start.sh dest=/opt/clowder/start.sh mode=0755
     - lineinfile: dest=/opt/clowder/conf/play.plugins regexp="^9992:services.RabbitmqPlugin" insertafter="^#9992:services.RabbitmqPlugin" line="9992:services.RabbitmqPlugin"
     - file: path=/opt/clowder state=directory recurse=yes owner=clowder group=users
 
-    #- command: "( ( cd /opt/clowder ; nohup ./sbt -Dhttp.port=9000 'run 9000' 1>/dev/null 2>&1 ) & )"
-    #  args:
-    #    chdir: /opt/clowder
+    - copy: src=files/clowder.service dest=/etc/systemd/system/clowder.service
+    # - copy: src=files/clowder.conf dest=/etc/init/clowder.conf backup=yes mode=0644
+    - name: Enable services
+      service: name=clowder state=started
 
-    - name: Starting application (First start may take 15 minutes)
+    #- name: Starting application (First start may take 15 minutes)
       #shell: start-stop-daemon --start --quiet --pidfile /var/run/clowder --exec /opt/clowder/start.sh
-      shell: ( ( cd /opt/clowder ; nohup ./sbt -Dhttp.port=9000 'run 9000' 1>console.out 2>&1 ) & )
-      args:
-        executable: "/bin/bash"
+    #  shell: ( ( cd /opt/clowder ; nohup ./sbt -Dhttp.port=9000 'run 9000' 1>console.out 2>&1 ) & )
+    #  become_user: clowder
+    #  args:
+    #    executable: "/bin/bash"
 
   handlers:
     - name: restart services
