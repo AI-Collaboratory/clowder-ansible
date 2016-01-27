@@ -51,11 +51,12 @@
 
     - name: Configuring Clowder application
       template: src=templates/custom.conf.j2 dest=/opt/clowder/custom/custom.conf
-    - lineinfile: dest=/opt/clowder/conf/play.plugins regexp="^9992:services.RabbitmqPlugin" insertafter="^#9992:services.RabbitmqPlugin" line="9992:services.RabbitmqPlugin"
+    - lineinfile: dest=/opt/clowder/custom/play.plugins create=yes line="9992:services.RabbitmqPlugin"
 
     - name: Setup Clowder systemd daemon service
       template: src=templates/clowder.service.j2 dest=/etc/systemd/system/clowder.service
     - command: systemctl daemon-reload
+
     - name: Enable services
       service: name=clowder state=restarted enabled=yes
 
