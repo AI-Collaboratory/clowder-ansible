@@ -21,7 +21,7 @@
 
 # Host machine IP to connect from outside, also set the SWAGGER
 # URL.
-hostIp = "{{ clowder_host }}"
+hostIp = "{{ hostvars[inventory_hostname]['ansible_' ~ clowder_interface]['ipv4']['address'] }}"
 
 # body parser maximum content length
 # based on Max BSON size 16777216, otherwise it gives exception
@@ -90,3 +90,10 @@ smtp {
     host=localhost
     from="{{ admin_email }}"
 }
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Elasticsearch
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+elasticsearchSettings.clusterName="{{ elasticsearch_cluster_name }}"
+elasticsearchSettings.serverAddress="{{ elasticsearch_host }}"
+elasticsearchSettings.serverPort=9300

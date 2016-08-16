@@ -1,11 +1,15 @@
 ---
 - hosts: clowderserver
-  sudo: yes
+  become: yes
+  vars:
+    clowder_version: 0.9.x-SNAPSHOT
+    clowder_dist: ../../BrownDog/clowder/target/universal/clowder-{{ clowder_version }}.zip
+    clowder_interface: ens4
   pre_tasks:
     - apt_repository: repo='deb http://www.rabbitmq.com/debian/ testing main' state=present
     - apt_key: url=http://www.rabbitmq.com/rabbitmq-signing-key-public.asc state=present
-    - apt_repository: repo='deb http://packages.elasticsearch.org/elasticsearch/1.3/debian stable main' state=present
-    - apt_key: url=http://packages.elasticsearch.org/GPG-KEY-elasticsearch state=present
+#    - apt_repository: repo='deb http://packages.elasticsearch.org/elasticsearch/1.3/debian stable main' state=present
+#    - apt_key: url=http://packages.elasticsearch.org/GPG-KEY-elasticsearch state=present
 #    - apt_repository: repo='deb http://downloads-distro.mongodb.org/repo/ubuntu-upstart dist 10gen' state=present
 #    - apt_key: keyserver=keyserver.ubuntu.com id=7F0CEB10 state=present
 
@@ -13,12 +17,11 @@
 #    - apt: pkg=policykit-1 state=installed
 
     - name: Install Packages
-      apt: pkg={{ item }} state=installed update_cache=yes
+      apt: pkg={{ item }} state=installed update_cache=yes allow_unauthenticated=yes
       with_items:
-        - openjdk-7-jdk
+        - openjdk-8-jdk
         - mongodb
         - rabbitmq-server
-        - elasticsearch
         - unzip
         - postfix
         - git
@@ -42,8 +45,9 @@
     - name: Ensure clowder user exists
       user: name=clowder group=clowder createhome=no shell=/bin/false system=yes state=present
 
-    - name: Downloading and installing Clowder at /opt/clowder
-      get_url: url=https://opensource.ncsa.illinois.edu/bamboo/artifact/CATS-CORE/JOB1/build-latestSuccessful/dist/clowder-{{ clowder_version }}.zip dest=/opt/clowder.zip
+    - name: Copy clowder.zip distribution to /opt
+      copy: src={{ clowder_dist }} dest=/opt/clowder.zip
+
     - unarchive: src=/opt/clowder.zip dest=/opt copy=no
     - file: path=/opt/clowder-{{ clowder_version }} state=directory recurse=yes owner=clowder group=users
     - file: path=/opt/clowder-{{ clowder_version }}/custom state=directory owner=clowder group=users
@@ -52,6 +56,8 @@
     - name: Configuring Clowder application
       template: src=templates/custom.conf.j2 dest=/opt/clowder/custom/custom.conf
     - lineinfile: dest=/opt/clowder/custom/play.plugins create=yes line="9992:services.RabbitmqPlugin"
+    - lineinfile: dest=/opt/clowder/custom/play.plugins create=yes line="10700:services.ElasticsearchPlugin"
+    - lineinfile: dest=/opt/clowder/custom/play.plugins create=yes line="10501:services.PolyglotPlugin"
 
     - name: Setup Clowder systemd daemon service
       template: src=templates/clowder.service.j2 dest=/etc/systemd/system/clowder.service
